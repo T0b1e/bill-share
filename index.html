@@ -1,20 +1,33 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>หารบิล (DEMO)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>โปรเจคแบ่งบิล</title>
   <!-- ฟอนต์ Prompt -->
-  <link href="https://fonts.googleapis.com/css2?family=Prompt&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Prompt&display=swap"
+    rel="stylesheet"
+  />
   <!-- Bootstrap CSS (optional, for card styling) -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link
+    rel="stylesheet"
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+  />
   <!-- Tom Select CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+  <link
+    href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"
+    rel="stylesheet"
+  />
   <style>
-    /* รีเซ็ตพื้นฐาน */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Base Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     body {
-      font-family: 'Prompt', sans-serif;
+      font-family: "Prompt", sans-serif;
       background: #eef2f5;
       color: #333;
       display: flex;
@@ -23,11 +36,15 @@
       min-height: 100vh;
       padding: 20px;
     }
-    .layout {
-        display: flex;
-        flex-direction: column;
-    }   
-    /* แผงเพื่อน (สำหรับเดสก์ท็อป: fixed แต่สำหรับมือถือ: relative) */
+    /* Color Variables:
+       Primary color now gray (#6c757d),
+       Income: green, Expense: red */
+    :root {
+      --primary-color: #6c757d;
+      --income-color: green;
+      --expense-color: red;
+    }
+    /* User Card (for desktop: fixed, for mobile: relative) */
     .user-card {
       position: fixed;
       top: 20px;
@@ -37,23 +54,51 @@
       border-radius: 10px;
       padding: 15px;
       width: 280px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       z-index: 100;
       animation: fadeInDown 0.6s ease forwards;
     }
     @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
-    .user-card h3 { margin-bottom: 10px; color: #4a90e2; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #4a90e2; color: #fff; }
+    .user-card h3 {
+      margin-bottom: 10px;
+      color: var(--primary-color);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: var(--primary-color);
+      color: #fff;
+    }
     button {
-      background: #4a90e2; color: #fff; border: none; padding: 8px 15px;
-      border-radius: 5px; cursor: pointer; transition: background 0.3s ease;
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
     }
-    button:hover { background: #357ab8; }
+    button:hover {
+      background: #495057;
+    }
     input[type="number"],
     input[type="text"] {
       width: 100%;
@@ -64,9 +109,22 @@
       font-size: 16px;
       transition: border-color 0.3s ease;
     }
-    input:focus { border-color: #4a90e2; outline: none; }
-    input::placeholder { color: #888; font-style: italic; }
-    /* คอนเทนเนอร์หลัก */
+    input:focus {
+      border-color: var(--primary-color);
+      outline: none;
+    }
+    input::placeholder {
+      color: #888;
+      font-style: italic;
+    }
+    /* Custom color classes */
+    .income {
+      color: var(--income-color);
+    }
+    .expense {
+      color: var(--expense-color);
+    }
+    /* Main Container */
     .container {
       width: 100%;
       max-width: 900px;
@@ -78,122 +136,164 @@
     .card {
       background: #fff;
       border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       padding: 20px;
       animation: fadeInUp 0.6s ease forwards;
     }
     @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .card h2, .card h3 { margin-bottom: 15px; color: #4a90e2; }
-    .card p { margin-bottom: 10px; }
-    #transactionCard { min-height: 300px; }
-    /* Responsive styles สำหรับมือถือ */
-    @media (max-width: 768px) {
-        .user-card {
-            position: relative;
-            top: 0;
-            right: 0;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        .container {
-            margin-left: 0;
-        }
-    
-      .container { max-width: 100%; }
-      table, thead, tbody, th, td, tr { display: block; }
-      thead tr { position: absolute; top: -9999px; left: -9999px; }
-      tr { border: 1px solid #ddd; margin-bottom: 10px; }
-      td { border: none; position: relative; padding-left: 50%; text-align: right; }
-      td:before {
-        position: absolute; top: 8px; left: 8px; width: 45%;
-        padding-right: 10px; white-space: nowrap; font-weight: bold; text-align: left;
+      from {
+        opacity: 0;
+        transform: translateY(20px);
       }
-      td[data-label]:before { content: attr(data-label); }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .card h2,
+    .card h3 {
+      margin-bottom: 15px;
+      color: var(--primary-color);
+    }
+    .card p {
+      margin-bottom: 10px;
+    }
+    #transactionCard {
+      min-height: 300px;
+    }
+    /* Responsive styles */
+    @media (max-width: 768px) {
+      .user-card {
+        position: relative;
+        width: 100%;
+        right: auto;
+        top: auto;
+        margin-bottom: 20px;
+      }
+      .container {
+        max-width: 100%;
+      }
+      table,
+      thead,
+      tbody,
+      th,
+      td,
+      tr {
+        display: block;
+      }
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+      tr {
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
+      }
+      td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+      }
+      td:before {
+        content: attr(data-label);
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: bold;
+        text-align: left;
+      }
     }
   </style>
 </head>
 <body>
-    <div class="layout">
-         <!-- แผงเพื่อน -->
-        <div class="user-card">
-            <h3>เพื่อนๆ 😊</h3>
-            <table id="userTable">
-            <thead>
-                <tr>
-                <th>ชื่อ</th>
-                <th>รับเงิน</th>
-                <th>จ่ายเงิน</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- User rows will be dynamically generated -->
-            </tbody>
-            </table>
-            <!-- Clicking this button adds a new user with default name -->
-            <button onclick="addUser()">➕ เพิ่มเพื่อน</button>
-        </div>
+  <!-- User Card -->
+  <div class="user-card">
+    <h3>สมาชิก</h3>
+    <table id="userTable">
+      <thead>
+        <tr>
+          <th>ชื่อ</th>
+          <th>รับเงิน</th>
+          <th>จ่ายเงิน</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- User rows will be generated dynamically -->
+      </tbody>
+    </table>
+    <button onclick="addUser()">➕ เพิ่มเพื่อน</button>
+  </div>
 
-        <div class="container">
-            <!-- การ์ดรายการบิล (extended) -->
-            <div class="card" id="transactionCard">
-            <h2>รายการบิล 💸</h2>
-            <table id="transactionTable">
-                <thead>
-                <tr>
-                    <th>ลำดับ</th>
-                    <th>จ่าย</th>
-                    <th>ใช้</th>
-                    <th>รายการ</th>
-                    <th>จำนวน</th>
-                    <th>ราคา</th>
-                    <th>จัดการ</th>
-                </tr>
-                </thead>
-                <tbody>
-                <!-- รายการบิล -->
-                </tbody>
-                <tfoot>
-                    <tr>
-                      <td colspan="7">รวมจำนวนรายการ: <span id="totalTransactionCount">0</span></td>
-                    </tr>
-                </tfoot>
-            </table>
-            <button onclick="addTransactionRow()">➕ เพิ่มรายการบิล</button>
-            </div>
-
-            <!-- การ์ดสรุปบิล -->
-            <div class="card" id="summaryCard">
-            <h2>สรุปบิลและค่าธรรมเนียม 📊</h2>
-            <p><strong>รวมเงิน:</strong> ฿<span id="totalPrice">0.00</span></p>
-            <p>
-                <label>ค่าบริการ: ฿<input type="number" id="serviceCharge" value="0" onchange="calculateSummary()"></label>
-            </p>
-            <p>
-                <label>ภาษีมูลค่าเพิ่ม: ฿<input type="number" id="vat" value="0" onchange="calculateSummary()"></label>
-            </p>
-            <p><strong>ยอดรวม:</strong> ฿<span id="grandTotal">0.00</span></p>
-
-            <h3>สรุปแบ่งบิล 🤝</h3>
-            <table id="settlementTable">
-                <thead>
-                <tr>
-                    <th>จาก</th>
-                    <th>ถึง</th>
-                    <th>จำนวน</th>
-                </tr>
-                </thead>
-                <tbody>
-                <!-- สรุปแบ่งบิล -->
-                </tbody>
-            </table>
-            </div>
-        </div>
+  <div class="container">
+    <!-- Transaction Card -->
+    <div class="card" id="transactionCard">
+      <h2>รายการ 💸</h2>
+      <table id="transactionTable">
+        <thead>
+          <tr>
+            <th>ลำดับ</th>
+            <th>จ่ายโดย</th>
+            <th>รับโดย</th>
+            <th>รายการ</th>
+            <th>จำนวน</th>
+            <th>ราคา</th>
+            <th>#</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Transaction rows will be added dynamically -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="7">
+              รวมจำนวนรายการ: <span id="totalTransactionCount">0</span>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+      <button onclick="addTransactionRow()">➕ เพิ่มรายการบิล</button>
     </div>
 
-  <!-- jQuery (optional, for Bootstrap JS) and Bootstrap JS -->
+    <!-- Settlement Card -->
+    <div class="card" id="summaryCard">
+      <h2>สรุปบิลและค่าธรรมเนียม 📊</h2>
+      <p>
+        <strong>รวมเงิน:</strong>
+        ฿<span id="totalPrice">0.00</span>
+      </p>
+      <p>
+        <label>ค่าบริการ: ฿<input type="number" id="serviceCharge" value="0" onchange="calculateSummary()" /></label>
+      </p>
+      <p>
+        <label>ภาษีมูลค่าเพิ่ม: ฿<input type="number" id="vat" value="0" onchange="calculateSummary()" /></label>
+      </p>
+      <p>
+        <strong>ยอดรวม:</strong>
+        ฿<span id="grandTotal">0.00</span>
+      </p>
+
+      <h3>สรุปแบ่งบิล 🤝</h3>
+      <table id="settlementTable">
+        <thead>
+          <tr>
+            <th>จาก</th>
+            <th>ถึง</th>
+            <th>จำนวน</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Settlement rows -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- jQuery & Bootstrap JS -->
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <!-- Tom Select JS -->
@@ -201,101 +301,91 @@
   <script>
     // Default 2 users
     let users = [
-    { name: "เพื่อนคนที่ 1", income: 0, expense: 0 },
-    { name: "เพื่อนคนที่ 2", income: 0, expense: 0 }
+      { name: "เพื่อนคนที่ 1", income: 0, expense: 0 },
+      { name: "เพื่อนคนที่ 2", income: 0, expense: 0 }
     ];
 
-    // Update the user table with contenteditable name cells
+    // Update User Table with inline editing for name
     function updateUserTable() {
-    const tbody = document.getElementById("userTable").querySelector("tbody");
-    tbody.innerHTML = "";
-    users.forEach((user, index) => {
+      const tbody = document.getElementById("userTable").querySelector("tbody");
+      tbody.innerHTML = "";
+      users.forEach((user, index) => {
         const row = document.createElement("tr");
         row.setAttribute("data-index", index);
         row.innerHTML = `
-        <td class="user-name" contenteditable="true" onblur="renameUser(this)">${user.name}</td>
-        <td>${user.income.toFixed(2)}</td>
-        <td>${user.expense.toFixed(2)}</td>
+          <td class="user-name" contenteditable="true" onblur="renameUser(this)">${user.name}</td>
+          <td class="income">${user.income.toFixed(2)}</td>
+          <td class="expense">${user.expense.toFixed(2)}</td>
         `;
         tbody.appendChild(row);
-    });
+      });
     }
 
-    // Instead of using prompt, add a new user with a default name
+    // Add new user with default name (editable)
     function addUser() {
-    users.push({ name: "New Friend", income: 0, expense: 0 });
-    updateUserTable();
-    updateAllDropdowns();
+      users.push({ name: "New Friend", income: 0, expense: 0 });
+      updateUserTable();
+      updateAllDropdowns();
     }
 
-    // When the user name cell loses focus, update the name in the array and dropdowns
+    // Rename user on blur event
     function renameUser(cell) {
-    const row = cell.parentElement;
-    const index = parseInt(row.getAttribute("data-index"));
-    const newName = cell.textContent.trim();
-    if(newName === "") {
+      const row = cell.parentElement;
+      const index = parseInt(row.getAttribute("data-index"));
+      const newName = cell.textContent.trim();
+      if (newName === "") {
         alert("ชื่อต้องไม่ว่าง");
-        cell.textContent = users[index].name; // revert if blank
+        cell.textContent = users[index].name;
         return;
-    }
-    users[index].name = newName;
-    updateAllDropdowns();
+      }
+      users[index].name = newName;
+      updateAllDropdowns();
     }
 
-    // ฟังก์ชันเพิ่มรายการบิล
+    // Add Transaction Row with index and data-labels for mobile
     function addTransactionRow() {
-        const tbody = document.getElementById("transactionTable").querySelector("tbody");
-        const row = document.createElement("tr");
-        row.classList.add("transaction-row");
-        row.innerHTML = `
-            <td class="tx-index" data-label="ลำดับ"></td>
-            <td data-label="จ่ายโดย">
-            <select multiple class="paidBy" onchange="calculateSummary()">
-                ${users.map((user, index) => `<option value="${index}">${user.name}</option>`).join('')}
-            </select>
-            </td>
-            <td data-label="รับโดย">
-            <select multiple class="paidTo" onchange="calculateSummary()">
-                ${users.map((user, index) => `<option value="${index}">${user.name}</option>`).join('')}
-            </select>
-            </td>
-            <td data-label="รายการ"><input type="text" class="item" placeholder="ชื่อรายการ"></td>
-            <td data-label="จำนวน"><input type="number" class="quantity" value="1" min="1" onchange="calculateSummary()"></td>
-            <td data-label="ราคา"><input type="number" class="price" value="0" step="0.01" onchange="calculateSummary()"></td>
-            <td data-label="จัดการ"><button onclick="removeRow(this)">ลบ</button></td>
-        `;
-        tbody.appendChild(row);
-        initializeTomSelectForRow(row);
-        calculateSummary();
-        }
-
-
-    function updateTransactionIndices() {
-        const rows = document.querySelectorAll("#transactionTable tbody tr.transaction-row");
-        rows.forEach((row, index) => {
-            row.querySelector(".tx-index").textContent = index + 1;
-        });
+      const tbody = document.getElementById("transactionTable").querySelector("tbody");
+      const row = document.createElement("tr");
+      row.classList.add("transaction-row");
+      row.innerHTML = `
+        <td class="tx-index" data-label="ลำดับ"></td>
+        <td data-label="จ่ายโดย">
+          <select multiple class="paidBy" onchange="calculateSummary()">
+            ${users.map((user, index) => `<option value="${index}">${user.name}</option>`).join('')}
+          </select>
+        </td>
+        <td data-label="รับโดย">
+          <select multiple class="paidTo" onchange="calculateSummary()">
+            ${users.map((user, index) => `<option value="${index}">${user.name}</option>`).join('')}
+          </select>
+        </td>
+        <td data-label="รายการ">
+          <input type="text" class="item" placeholder="ชื่อรายการ" />
+        </td>
+        <td data-label="จำนวน">
+          <input type="number" class="quantity" value="1" min="1" onchange="calculateSummary()" />
+        </td>
+        <td data-label="ราคา">
+          <input type="number" class="price" value="0" step="0.01" onchange="calculateSummary()" />
+        </td>
+        <td data-label="จัดการ">
+          <button onclick="removeRow(this)">ลบ</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+      initializeTomSelectForRow(row);
+      calculateSummary();
     }
 
-    // Update footer to show total sum of quantities
-    function updateTransactionFooter() {
-    const rows = document.querySelectorAll("#transactionTable tbody tr");
-    let totalQuantity = 0;
-    rows.forEach(row => {
-        const quantity = parseFloat(row.querySelector(".quantity").value) || 0;
-        totalQuantity += quantity;
-    });
-    document.getElementById("totalTransactionCount").textContent = totalQuantity.toFixed(2);
-    }
-
+    // Initialize Tom Select for new row
     function initializeTomSelectForRow(row) {
-      row.querySelectorAll("select").forEach(select => {
+      row.querySelectorAll("select").forEach((select) => {
         if (!select.tomselect) {
           new TomSelect(select, {
-            plugins: ['remove_button'],
+            plugins: ["remove_button"],
             persist: false,
             create: false,
-            maxOptions: users.length
+            maxOptions: users.length,
           });
         }
       });
@@ -307,14 +397,14 @@
       calculateSummary();
     }
 
-    // อัปเดต select ทั้งหมดด้วย Tom Select
+    // Update all dropdowns (destroy & rebuild Tom Select)
     function updateAllDropdowns() {
       const selects = document.querySelectorAll("select.paidBy, select.paidTo");
-      selects.forEach(select => {
+      selects.forEach((select) => {
         if (select.tomselect) {
           select.tomselect.destroy();
         }
-        const currentValues = Array.from(select.selectedOptions).map(opt => opt.value);
+        const currentValues = Array.from(select.selectedOptions).map((opt) => opt.value);
         select.innerHTML = "";
         users.forEach((user, index) => {
           const option = document.createElement("option");
@@ -326,57 +416,61 @@
           select.appendChild(option);
         });
         new TomSelect(select, {
-          plugins: ['remove_button'],
+          plugins: ["remove_button"],
           persist: false,
           create: false,
-          maxOptions: users.length
+          maxOptions: users.length,
         });
       });
     }
 
-    function calculateSummary() {
-        let totalPrice = 0;
-        const rows = document.querySelectorAll("#transactionTable tbody tr");
-        rows.forEach(row => {
-            const quantity = parseFloat(row.querySelector(".quantity").value) || 0;
-            const price = parseFloat(row.querySelector(".price").value) || 0;
-            totalPrice += quantity * price;
-        });
-        document.getElementById("totalPrice").textContent = totalPrice.toFixed(2);
-        
-        const serviceCharge = parseFloat(document.getElementById("serviceCharge").value) || 0;
-        const vat = parseFloat(document.getElementById("vat").value) || 0;
-        const grandTotal = totalPrice + serviceCharge + vat;
-        document.getElementById("grandTotal").textContent = grandTotal.toFixed(2);
-        
-        calculateSettlement();
-        updateTransactionIndices();
-        updateTransactionFooter();
+    // Update transaction row indices and footer (total quantity)
+    function updateTransactionIndices() {
+      const rows = document.querySelectorAll("#transactionTable tbody tr.transaction-row");
+      rows.forEach((row, index) => {
+        row.querySelector(".tx-index").textContent = index + 1;
+      });
     }
 
-    // คำนวณแบ่งบิล (ไม่รวม self-transfer)
+    function updateTransactionFooter() {
+      const rows = document.querySelectorAll("#transactionTable tbody tr");
+      let totalQuantity = 0;
+      rows.forEach((row) => {
+        const quantity = parseFloat(row.querySelector(".quantity").value) || 0;
+        totalQuantity += quantity;
+      });
+      document.getElementById("totalTransactionCount").textContent = totalQuantity.toFixed(2);
+    }
+
+    // Settlement Calculation with netting and grouping reverse pairs
     function calculateSettlement() {
-      // Reset income and expense for each user
-      users.forEach(user => {
+      // Reset income/expense for each user
+      users.forEach((user) => {
         user.income = 0;
         user.expense = 0;
       });
-      
-      const settlementBody = document.getElementById("settlementTable").querySelector("tbody");
+
+      const settlementBody = document
+        .getElementById("settlementTable")
+        .querySelector("tbody");
       settlementBody.innerHTML = "";
-      
+
       // Aggregate amounts for each (payer, recipient) pair
       const summaryMap = {};
-      
+
       const rows = document.querySelectorAll("#transactionTable tbody tr");
-      rows.forEach(row => {
+      rows.forEach((row) => {
         const quantity = parseFloat(row.querySelector(".quantity").value) || 0;
         const price = parseFloat(row.querySelector(".price").value) || 0;
         const amount = quantity * price;
-        
-        const paidByOptions = Array.from(row.querySelector(".paidBy").selectedOptions).map(opt => parseInt(opt.value));
-        const paidToOptions = Array.from(row.querySelector(".paidTo").selectedOptions).map(opt => parseInt(opt.value));
-        
+
+        const paidByOptions = Array.from(row.querySelector(".paidBy").selectedOptions).map((opt) =>
+          parseInt(opt.value)
+        );
+        const paidToOptions = Array.from(row.querySelector(".paidTo").selectedOptions).map((opt) =>
+          parseInt(opt.value)
+        );
+
         let validPairs = [];
         for (let i = 0; i < paidByOptions.length; i++) {
           for (let j = 0; j < paidToOptions.length; j++) {
@@ -385,14 +479,14 @@
             }
           }
         }
-        
+
         if (validPairs.length > 0) {
           const perPairAmount = amount / validPairs.length;
-          validPairs.forEach(pair => {
-            // Update each user's totals
+          validPairs.forEach((pair) => {
+            // Update user totals
             users[pair.payer].income += perPairAmount;
             users[pair.recipient].expense += perPairAmount;
-            
+
             const key = `${pair.payer}-${pair.recipient}`;
             if (!summaryMap[key]) {
               summaryMap[key] = 0;
@@ -401,40 +495,38 @@
           });
         }
       });
-      
-      // Process reverse pairs and net the amounts
+
+      // Process reverse pairs and net amounts
       const processed = new Set();
       for (const key in summaryMap) {
         if (processed.has(key)) continue;
-        
+
         const [payer, recipient] = key.split("-").map(Number);
         const reverseKey = `${recipient}-${payer}`;
-        
+
         if (summaryMap.hasOwnProperty(reverseKey)) {
-          // Both directions exist, calculate net amount
+          // Both directions exist, net the amounts
           const net = summaryMap[key] - summaryMap[reverseKey];
           if (net === 0) {
             const messageRow = document.createElement("tr");
             messageRow.innerHTML = `<td colspan="3">${users[payer].name} กับ ${users[recipient].name} ไม่ต้องจ่ายกันละ</td>`;
             settlementBody.appendChild(messageRow);
           } else if (net > 0) {
-            // net positive: summaryMap[key] > summaryMap[reverseKey] → 
-            // Means user2 owes user1 net
+            // net positive: user2 owes user1, so show as income (green)
             const settlementRow = document.createElement("tr");
             settlementRow.innerHTML = `
               <td>${users[recipient].name}</td>
               <td>${users[payer].name}</td>
-              <td>฿${net.toFixed(2)}</td>
+              <td class="income">฿${net.toFixed(2)}</td>
             `;
             settlementBody.appendChild(settlementRow);
           } else {
-            // net negative: summaryMap[key] < summaryMap[reverseKey] →
-            // Means user1 owes user2 abs(net)
+            // net negative: user1 owes user2, show as expense (red)
             const settlementRow = document.createElement("tr");
             settlementRow.innerHTML = `
               <td>${users[payer].name}</td>
               <td>${users[recipient].name}</td>
-              <td>฿${Math.abs(net).toFixed(2)}</td>
+              <td class="expense">฿${Math.abs(net).toFixed(2)}</td>
             `;
             settlementBody.appendChild(settlementRow);
           }
@@ -452,13 +544,32 @@
           processed.add(key);
         }
       }
-      
+
       updateUserTable();
+      updateTransactionIndices();
+      updateTransactionFooter();
     }
 
+    function calculateSummary() {
+      let totalPrice = 0;
+      const rows = document.querySelectorAll("#transactionTable tbody tr");
+      rows.forEach((row) => {
+        const quantity = parseFloat(row.querySelector(".quantity").value) || 0;
+        const price = parseFloat(row.querySelector(".price").value) || 0;
+        totalPrice += quantity * price;
+      });
+      document.getElementById("totalPrice").textContent = totalPrice.toFixed(2);
 
-    // เมื่อโหลดหน้าเว็บ: แสดง default 2 เพื่อน แล้วเพิ่มรายการบิลเริ่มต้น 5 รายการ
-    document.addEventListener("DOMContentLoaded", function() {
+      const serviceCharge = parseFloat(document.getElementById("serviceCharge").value) || 0;
+      const vat = parseFloat(document.getElementById("vat").value) || 0;
+      const grandTotal = totalPrice + serviceCharge + vat;
+      document.getElementById("grandTotal").textContent = grandTotal.toFixed(2);
+
+      calculateSettlement();
+    }
+
+    // On DOM load: update user table and add 5 default transaction rows
+    document.addEventListener("DOMContentLoaded", function () {
       updateUserTable();
       updateAllDropdowns();
       for (let i = 0; i < 5; i++) {
