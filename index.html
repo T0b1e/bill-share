@@ -466,6 +466,7 @@
       settlementBody.innerHTML = "";
 
       // Aggregate amounts for each (payer, recipient) pair
+      // Here, key "A-B" means: A paid on behalf of B.
       const summaryMap = {};
 
       const rows = document.querySelectorAll("#transactionTable tbody tr");
@@ -506,7 +507,7 @@
         }
       });
 
-      // Process reverse pairs and net amounts
+      // Process aggregated pairs and net reverse pairs
       const processed = new Set();
       for (const key in summaryMap) {
         if (processed.has(key)) continue;
@@ -515,14 +516,17 @@
         const reverseKey = `${recipient}-${payer}`;
 
         if (summaryMap.hasOwnProperty(reverseKey)) {
-          // Both directions exist, net the amounts
+          // Both directions exist. Compute net:
           const net = summaryMap[key] - summaryMap[reverseKey];
           if (net === 0) {
+            // They cancel each other out.
             const messageRow = document.createElement("tr");
             messageRow.innerHTML = `<td colspan="3">${users[payer].name} กับ ${users[recipient].name} ไม่ต้องจ่ายกันละ</td>`;
             settlementBody.appendChild(messageRow);
           } else if (net > 0) {
-            // net positive: user2 owes user1, so show as income (green)
+            // Net positive: For key "payer-recipient", net > 0 means that user1 (payer) paid more for user2,
+            // so the recipient (user2) owes the payer (user1) the net amount.
+            // Therefore, display: FROM: user2, TO: user1.
             const settlementRow = document.createElement("tr");
             settlementRow.innerHTML = `
               <td>${users[recipient].name}</td>
@@ -531,7 +535,10 @@
             `;
             settlementBody.appendChild(settlementRow);
           } else {
-            // net negative: user1 owes user2, show as expense (red)
+            // Net negative: summaryMap[key] < summaryMap[reverseKey]
+            // That means user2 (in the reverse pair) paid more for user1,
+            // so user1 owes user2 the absolute net amount.
+            // Therefore, display: FROM: user1, TO: user2.
             const settlementRow = document.createElement("tr");
             settlementRow.innerHTML = `
               <td>${users[payer].name}</td>
@@ -543,11 +550,13 @@
           processed.add(key);
           processed.add(reverseKey);
         } else {
-          // No reverse exists, output normally
+          // No reverse exists. In this case, we want the settlement to show that
+          // the person who "took" (recipient) must pay the one who "paid" (payer).
+          // So output: FROM: recipient, TO: payer.
           const settlementRow = document.createElement("tr");
           settlementRow.innerHTML = `
-            <td>${users[payer].name}</td>
             <td>${users[recipient].name}</td>
+            <td>${users[payer].name}</td>
             <td>฿${summaryMap[key].toFixed(2)}</td>
           `;
           settlementBody.appendChild(settlementRow);
@@ -559,6 +568,7 @@
       updateTransactionIndices();
       updateTransactionFooter();
     }
+
 
     function calculateSummary() {
       let totalPrice = 0;
