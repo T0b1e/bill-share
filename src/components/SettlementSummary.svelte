@@ -61,8 +61,8 @@
             </div>
             <span class="font-medium text-stone-800 truncate max-w-[120px]">{getUserName(transfer.to)}</span>
           </div>
-          <div class="font-semibold px-4 py-1.5 bg-stone-800 text-stone-50 rounded-lg shrink-0 flex items-center gap-1">
-            {transfer.amount.toFixed(2)} <span class="text-stone-400 font-normal text-sm">บาท</span>
+          <div class="font-semibold px-4 py-1.5 bg-green-pastel text-emerald-900 rounded-lg shrink-0 flex items-center gap-1 border border-emerald-100">
+            {transfer.amount.toFixed(2)} <span class="text-emerald-600/70 font-normal text-sm">บาท</span>
           </div>
         </div>
       {/each}

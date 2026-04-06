@@ -3,6 +3,7 @@
 
 @theme {
   --font-sans: "Kanit", sans-serif;
+  --color-green-pastel: #dcfce7;
 }
 
 html.dark {

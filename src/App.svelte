@@ -103,7 +103,7 @@
   }
 </script>
 
-<div class="min-h-screen p-4 md:p-8 flex flex-col items-center gap-8 pb-32 transition-colors duration-300">
+<div class="min-h-screen p-4 md:p-8 flex flex-col items-center gap-4 pb-32 transition-colors duration-300">
   <div class="w-full max-w-7xl flex justify-between items-center px-2">
     <h1 class="text-3xl font-semibold tracking-tight text-stone-800 transition-colors">หารเงินจ้าฟ</h1>
     <button on:click={toggleTheme} class="p-2 rounded-full hover:bg-stone-200 text-stone-600 transition-colors cursor-pointer active:scale-95 shadow-sm bg-white border border-stone-200" title="Toggle Theme">
