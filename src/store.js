@@ -168,3 +168,38 @@ export const settlement = derived(
     };
   }
 );
+
+// Sync transactions when users are deleted
+users.subscribe($users => {
+  const currentUserIds = new Set($users.map(user => user.id));
+  
+  transactions.update($transactions => {
+    let hasChanges = false;
+    
+    const updatedTransactions = $transactions.map(transaction => {
+      const filteredPaidBy = transaction.paidBy.filter(payer => {
+        const userId = payer.originalUserId || payer.id;
+        return currentUserIds.has(userId);
+      });
+      
+      const filteredPaidFor = transaction.paidFor.filter(eater => {
+        const userId = eater.originalUserId || eater.id;
+        return currentUserIds.has(userId);
+      });
+      
+      if (filteredPaidBy.length !== transaction.paidBy.length || 
+          filteredPaidFor.length !== transaction.paidFor.length) {
+        hasChanges = true;
+        return { 
+          ...transaction, 
+          paidBy: filteredPaidBy, 
+          paidFor: filteredPaidFor 
+        };
+      }
+      
+      return transaction;
+    });
+    
+    return hasChanges ? updatedTransactions : $transactions;
+  });
+});

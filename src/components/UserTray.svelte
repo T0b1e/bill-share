@@ -1,6 +1,6 @@
 <script>
-  import { users } from '../store.js';
-  import { dndzone } from 'svelte-dnd-action';
+  import { users, PASTEL_COLORS } from '../store.js';
+  import { dndzone, TRIGGERS } from 'svelte-dnd-action';
   import { Trash2, AlertCircle, X } from 'lucide-svelte';
 
   // We need a local copy of users for the dndzone to work correctly
@@ -48,16 +48,55 @@
   function handleNameChange(event, user) {
      attemptNameChange(user.id, user.name, event.target.value, event.target);
   }
+
+  let activePickerId = null;
+
+  function togglePicker(userId) {
+     activePickerId = activePickerId === userId ? null : userId;
+  }
+
+  function selectColor(userId, color) {
+     $users = $users.map(u => u.id === userId ? { ...u, color: color } : u);
+     activePickerId = null;
+  }
 </script>
 
-<div class="flex flex-col gap-3 min-h-[100px]"
+<div class="flex flex-col gap-3 min-h-[100px] relative"
      use:dndzone={{items: items, type: 'user', flipDurationMs: 200, dropFromOthersDisabled: true}}
      on:consider={handleDndConsider}
      on:finalize={handleDndFinalize}>
   {#each items as user (user.id)}
     <div class="flex items-center gap-2 bg-white hover:bg-stone-50 border border-stone-200 p-2 rounded-xl group relative transition-all shadow-sm">
-      <div class="w-8 h-8 rounded-full flex items-center justify-center font-medium text-xs overflow-hidden flex-shrink-0 cursor-grab active:cursor-grabbing shadow-inner shrink-0 leading-none pb-0.5 border {user.color}">
-        {user.name.substring(0, 2).trim()}
+      <div class="relative">
+        <button 
+          type="button"
+          on:dblclick|stopPropagation={() => togglePicker(user.id)}
+          class="w-8 h-8 rounded-full flex items-center justify-center font-medium text-xs overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-stone-200 shadow-inner shrink-0 leading-none pb-0.5 border transition-all {user.color}"
+          title="ดับเบิลคลิกเพื่อเลือกสี"
+        >
+          {user.name.substring(0, 2).trim()}
+        </button>
+
+        {#if activePickerId === user.id}
+          <!-- Overlay to close picker -->
+          <div 
+            class="fixed inset-0 z-10" 
+            on:click|stopPropagation={() => activePickerId = null}
+            role="presentation"
+          ></div>
+          
+          <!-- Picker Popover -->
+          <div class="absolute top-10 left-0 z-20 bg-white border border-stone-200 rounded-xl shadow-xl p-2 flex flex-wrap gap-1.5 w-32 animate-in fade-in zoom-in duration-150 origin-top-left">
+            {#each PASTEL_COLORS as color}
+              <button 
+                type="button"
+                on:click|stopPropagation={() => selectColor(user.id, color)}
+                class="w-6 h-6 rounded-full border border-stone-100 transition-transform active:scale-90 {color} {user.color === color ? 'ring-2 ring-stone-400 ring-offset-1' : ''}"
+                aria-label="เลือกสีนี้"
+              ></button>
+            {/each}
+          </div>
+        {/if}
       </div>
       <input type="text" value={user.name} 
              on:change={(e) => handleNameChange(e, user)}

@@ -103,23 +103,28 @@
   }
 </script>
 
-<div class="min-h-screen p-4 md:p-8 flex flex-col items-center gap-4 pb-32 transition-colors duration-300">
+<div class="min-h-screen p-4 md:p-8 flex flex-col items-center gap-4 pb-32 transition-colors duration-300 bg-stone-50">
+  
   <div class="w-full max-w-7xl flex justify-between items-center px-2">
-    <h1 class="text-3xl font-semibold tracking-tight text-stone-800 transition-colors">หารเงินจ้าฟ</h1>
-    <button on:click={toggleTheme} class="p-2 rounded-full hover:bg-stone-200 text-stone-600 transition-colors cursor-pointer active:scale-95 shadow-sm bg-white border border-stone-200" title="Toggle Theme">
-      {#if isDark} <Sun size={22} /> {:else} <Moon size={22} /> {/if}
+    <div class="flex items-center gap-3">
+      <img src="/bill-shared.png" alt="Bill Share Logo" class="w-10 h-10 shadow-sm rounded-xl border border-stone-100" />
+      <h1 class="text-3xl font-bold tracking-tighter text-stone-800 transition-colors">หารเงินจ้าฟ</h1>
+    </div>
+    <button on:click={toggleTheme} class="p-2.5 rounded-xl hover:bg-stone-200 text-stone-600 transition-all cursor-pointer active:scale-95 shadow-sm bg-white border border-stone-200" title="Toggle Theme">
+      {#if isDark} <Sun size={20} /> {:else} <Moon size={20} /> {/if}
     </button>
   </div>
 
   <div class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
+    <!-- Main Billing Element -->
     <div class="lg:col-span-4 flex flex-col gap-6 w-full shadow-sm rounded-2xl bg-white border border-stone-200">
       <div class="p-6 md:p-8 bg-white rounded-t-2xl border-b border-stone-100 flex flex-col min-h-[400px]">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-medium tracking-tight text-stone-800">รายการ 💸</h2>
+          <h2 class="text-xl font-medium tracking-tight text-stone-800">รายการค่าใช้จ่าย</h2>
           <div class="flex items-center gap-3">
             <label class="flex items-center gap-2 text-sm text-stone-600 cursor-pointer select-none border border-stone-200 bg-stone-50 px-3 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
               <input type="checkbox" bind:checked={$autoApplyPayer} on:change={handleToggleAutoApply} class="w-4 h-4 text-stone-800 rounded border-stone-300 cursor-pointer accent-stone-700 mt-0.5" />
-              <span class="font-medium">จ่ายทั้งหมด</span>
+              <span class="font-medium">เลี้ยง</span>
             </label>
             <button on:click={clearTransactions} class="flex items-center gap-1.5 text-rose-500 hover:text-rose-600 transition-colors bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg text-sm font-medium border border-rose-200 cursor-pointer shadow-sm active:scale-95">
               เคลียร์ทุกรายการ
@@ -133,7 +138,7 @@
       </div>
 
       <div class="p-3 md:p-8 bg-stone-50/50 rounded-b-2xl">
-        <h2 class="text-xl font-medium tracking-tight text-stone-800 mb-6">สรุปและแบ่งบิล 📊</h2>
+        <h2 class="text-xl font-medium tracking-tight text-stone-800 mb-6">สรุปและแบ่งบิล</h2>
         <SettlementSummary />
       </div>
     </div>
@@ -141,7 +146,7 @@
     <!-- Right Side Tray -->
     <div class="lg:col-span-2 md:sticky md:top-8 bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col w-full h-auto">
       <div class="flex justify-between items-center mb-6">
-        <h2 class="text-lg font-medium text-stone-800">เพื่อนๆ 😊</h2>
+        <h2 class="text-lg font-medium text-stone-800">เพื่อนๆ</h2>
         <button on:click={addUser} class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors p-2 hover:bg-stone-50 rounded-lg cursor-pointer font-medium" title="เพิ่มเพื่อน">
           <Plus size={18} /> เพิ่มรายการเพื่อน
         </button>
