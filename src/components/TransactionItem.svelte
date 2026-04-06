@@ -1,6 +1,6 @@
 <script>
   import { dndzone, TRIGGERS } from "svelte-dnd-action";
-  import { X } from "lucide-svelte";
+  import { X, Plus, Check } from "lucide-svelte";
   import { transactions, users, autoApplyPayer } from "../store.js";
 
   function uuidv4() {
@@ -16,6 +16,71 @@
   let showPayerModal = false;
   let modalUser = null;
   let customAmount = "";
+
+  // User picker modal (+ button on each drop zone)
+  let showUserPickerModal = false;
+  let pickerTarget = null; // 'paidBy' | 'paidFor'
+  let pickerSelected = new Set();
+
+  $: alreadyAddedIds = (() => {
+    if (!pickerTarget) return new Set();
+    const items = pickerTarget === 'paidBy' ? transaction.paidBy : transaction.paidFor;
+    return new Set(items.map(u => u.originalUserId || u.id));
+  })();
+
+  function openUserPicker(target) {
+    pickerTarget = target;
+    pickerSelected = new Set();
+    showUserPickerModal = true;
+  }
+
+  function closeUserPicker() {
+    showUserPickerModal = false;
+    pickerTarget = null;
+    pickerSelected = new Set();
+  }
+
+  function toggleUserSelection(userId) {
+    const s = new Set(pickerSelected);
+    if (s.has(userId)) s.delete(userId);
+    else s.add(userId);
+    pickerSelected = s;
+  }
+
+  function confirmUserSelection() {
+    if (pickerSelected.size === 0) { closeUserPicker(); return; }
+
+    const newItems = [...pickerSelected].map(userId => {
+      const user = $users.find(u => u.id === userId);
+      return { ...user, originalUserId: user.id, id: uuidv4(), isTrayItem: false };
+    });
+
+    if (pickerTarget === 'paidBy') {
+      const merged = removeDuplicates([...transaction.paidBy, ...newItems]);
+      if ($autoApplyPayer) {
+        $transactions = $transactions.map(tx => {
+          if (tx.id === transaction.id) return { ...tx, paidBy: merged };
+          return { ...tx, paidBy: merged.map(p => ({ ...p, id: uuidv4() })) };
+        });
+      } else {
+        $transactions = $transactions.map(tx =>
+          tx.id === transaction.id ? { ...tx, paidBy: merged } : tx
+        );
+      }
+    } else {
+      const cleanItems = newItems.map(item => {
+        const c = { ...item };
+        delete c.customPaidAmount;
+        return c;
+      });
+      const merged = removeDuplicates([...transaction.paidFor, ...cleanItems]);
+      $transactions = $transactions.map(tx =>
+        tx.id === transaction.id ? { ...tx, paidFor: merged } : tx
+      );
+    }
+
+    closeUserPicker();
+  }
 
   $: paidByItems = transaction.paidBy;
   $: paidForItems = transaction.paidFor;
@@ -280,6 +345,64 @@
   }
 </script>
 
+{#if showUserPickerModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1917]/40 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-xs p-6 relative">
+      <button on:click={closeUserPicker} class="absolute top-4 right-4 text-stone-400 hover:text-stone-700 cursor-pointer">
+        <X size={20} />
+      </button>
+      <h3 class="text-base font-semibold text-stone-800 mb-1">
+        {pickerTarget === 'paidBy' ? 'เลือกผู้จ่าย' : 'เลือกผู้ใช้'}
+      </h3>
+      <p class="text-xs text-stone-400 mb-4">เลือกได้หลายคน</p>
+
+      <div class="flex flex-col gap-2 mb-5 max-h-64 overflow-y-auto">
+        {#each $users as user}
+          {@const isAdded = alreadyAddedIds.has(user.id)}
+          {@const isSelected = pickerSelected.has(user.id)}
+          <button
+            type="button"
+            on:click={() => !isAdded && toggleUserSelection(user.id)}
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left
+              {isAdded
+                ? 'opacity-40 cursor-not-allowed border-stone-100 bg-stone-50'
+                : isSelected
+                  ? 'border-stone-400 bg-stone-50 cursor-pointer'
+                  : 'border-stone-200 hover:border-stone-300 bg-white cursor-pointer'}"
+          >
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border flex-shrink-0 {user.color}">
+              {user.name.substring(0, 2).trim()}
+            </div>
+            <span class="text-sm text-stone-700 flex-1 font-medium">{user.name}</span>
+            {#if isAdded}
+              <Check size={15} class="text-stone-400 flex-shrink-0" />
+            {:else if isSelected}
+              <div class="w-4 h-4 rounded bg-stone-800 flex items-center justify-center flex-shrink-0">
+                <Check size={10} class="text-white" />
+              </div>
+            {:else}
+              <div class="w-4 h-4 rounded border border-stone-300 flex-shrink-0"></div>
+            {/if}
+          </button>
+        {/each}
+      </div>
+
+      <div class="flex gap-3">
+        <button on:click={closeUserPicker} class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 py-2.5 rounded-xl font-medium cursor-pointer transition text-sm">
+          ยกเลิก
+        </button>
+        <button
+          on:click={confirmUserSelection}
+          disabled={pickerSelected.size === 0}
+          class="flex-1 bg-stone-800 hover:bg-stone-900 disabled:opacity-40 text-white py-2.5 rounded-xl font-medium cursor-pointer transition shadow-sm active:scale-95 text-sm"
+        >
+          เพิ่ม{pickerSelected.size > 0 ? ` (${pickerSelected.size})` : ''}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 {#if showPayerModal && modalUser}
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1917]/40 backdrop-blur-sm px-4"
@@ -384,38 +507,44 @@
       <div class="px-1 text-xs text-stone-400 font-medium tracking-wide mt-1">
         จ่ายโดย
       </div>
-      <div
-        class="min-h-[62px] bg-stone-50 border border-dashed border-stone-200 rounded-xl p-1.5 flex flex-wrap gap-1.5 items-center transition-colors shadow-inner"
-        use:dndzone={{ items: paidByItems, type: "user", flipDurationMs: 200 }}
-        on:consider={handleConsiderBy}
-        on:finalize={handleFinalizeBy}
-      >
-        {#each paidByItems as user (user.id)}
-          <button
-            type="button"
-            class="w-9 h-9 rounded-full flex items-center justify-center font-medium text-xs shadow-sm cursor-pointer active:scale-95 leading-none pb-0.5 border relative {getAvColor(
-              user,
-            )}"
-            title={getFullAvName(user)}
-            on:click={() => openPayerModal(user)}
-          >
-            {getAvText(user)}
-            {#if paidByItems.length > 1}
-              <div
-                class="absolute -bottom-1.5 -right-2 bg-stone-800 dark:bg-stone-600 text-white text-[9px] px-1 rounded-sm shadow-sm leading-none py-0.5 pointer-events-none z-10 font-bold tracking-tight"
-              >
-                {getPayerLabel(user)}
-              </div>
-            {/if}
-          </button>
-        {/each}
-        {#if paidByItems.length === 0}
-          <div
-            class="text-xs text-stone-400 w-full text-center py-2 pointer-events-none select-none"
-          >
-            ลากเพื่อนมาวาง
-          </div>
-        {/if}
+      <div class="relative">
+        <div
+          class="min-h-[62px] bg-stone-50 border border-dashed border-stone-200 rounded-xl p-1.5 pr-9 flex flex-wrap gap-1.5 items-center transition-colors shadow-inner"
+          use:dndzone={{ items: paidByItems, type: "user", flipDurationMs: 200 }}
+          on:consider={handleConsiderBy}
+          on:finalize={handleFinalizeBy}
+        >
+          {#each paidByItems as user (user.id)}
+            <button
+              type="button"
+              class="w-9 h-9 rounded-full flex items-center justify-center font-medium text-xs shadow-sm cursor-pointer active:scale-95 leading-none pb-0.5 border relative {getAvColor(user)}"
+              title={getFullAvName(user)}
+              on:click={() => openPayerModal(user)}
+            >
+              {getAvText(user)}
+              {#if paidByItems.length > 1}
+                <div
+                  class="absolute -bottom-1.5 -right-2 bg-stone-800 dark:bg-stone-600 text-white text-[9px] px-1 rounded-sm shadow-sm leading-none py-0.5 pointer-events-none z-10 font-bold tracking-tight"
+                >
+                  {getPayerLabel(user)}
+                </div>
+              {/if}
+            </button>
+          {/each}
+          {#if paidByItems.length === 0}
+            <div class="text-xs text-stone-400 w-full text-center py-2 pointer-events-none select-none">
+              ลากเพื่อนมาวาง
+            </div>
+          {/if}
+        </div>
+        <button
+          type="button"
+          on:click={() => openUserPicker('paidBy')}
+          class="absolute bottom-2 right-2 w-6 h-6 rounded-full border border-stone-300 bg-white flex items-center justify-center text-stone-400 hover:border-stone-500 hover:text-stone-600 transition-all cursor-pointer shadow-sm active:scale-95"
+          title="เพิ่มผู้จ่าย"
+        >
+          <Plus size={12} />
+        </button>
       </div>
     </div>
 
@@ -430,29 +559,35 @@
           >ทุกคน</button
         >
       </div>
-      <div
-        class="min-h-[62px] bg-stone-50 border border-dashed border-stone-200 rounded-xl p-1.5 flex flex-wrap gap-1.5 items-center transition-colors shadow-inner"
-        use:dndzone={{ items: paidForItems, type: "user", flipDurationMs: 200 }}
-        on:consider={handleConsiderFor}
-        on:finalize={handleFinalizeFor}
-      >
-        {#each paidForItems as user (user.id)}
-          <div
-            class="w-9 h-9 rounded-full flex items-center justify-center font-medium text-xs shadow-sm cursor-grab active:cursor-grabbing leading-none pb-0.5 border {getAvColor(
-              user,
-            )}"
-            title={getFullAvName(user)}
-          >
-            {getAvText(user)}
-          </div>
-        {/each}
-        {#if paidForItems.length === 0}
-          <div
-            class="text-xs text-stone-400 w-full text-center py-2 pointer-events-none select-none"
-          >
-            ลากเพื่อนมาวาง
-          </div>
-        {/if}
+      <div class="relative">
+        <div
+          class="min-h-[62px] bg-stone-50 border border-dashed border-stone-200 rounded-xl p-1.5 pr-9 flex flex-wrap gap-1.5 items-center transition-colors shadow-inner"
+          use:dndzone={{ items: paidForItems, type: "user", flipDurationMs: 200 }}
+          on:consider={handleConsiderFor}
+          on:finalize={handleFinalizeFor}
+        >
+          {#each paidForItems as user (user.id)}
+            <div
+              class="w-9 h-9 rounded-full flex items-center justify-center font-medium text-xs shadow-sm cursor-grab active:cursor-grabbing leading-none pb-0.5 border {getAvColor(user)}"
+              title={getFullAvName(user)}
+            >
+              {getAvText(user)}
+            </div>
+          {/each}
+          {#if paidForItems.length === 0}
+            <div class="text-xs text-stone-400 w-full text-center py-2 pointer-events-none select-none">
+              ลากเพื่อนมาวาง
+            </div>
+          {/if}
+        </div>
+        <button
+          type="button"
+          on:click={() => openUserPicker('paidFor')}
+          class="absolute bottom-2 right-2 w-6 h-6 rounded-full border border-stone-300 bg-white flex items-center justify-center text-stone-400 hover:border-stone-500 hover:text-stone-600 transition-all cursor-pointer shadow-sm active:scale-95"
+          title="เพิ่มผู้ใช้"
+        >
+          <Plus size={12} />
+        </button>
       </div>
     </div>
   </div>

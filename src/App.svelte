@@ -3,14 +3,19 @@
   import UserTray from './components/UserTray.svelte';
   import TransactionList from './components/TransactionList.svelte';
   import SettlementSummary from './components/SettlementSummary.svelte';
+  import PinModal from './components/PinModal.svelte';
   import { Plus, Sun, Moon, X } from 'lucide-svelte';
   import { onMount } from 'svelte';
 
   let isDark = false;
+  let isAuthenticated = false;
 
   onMount(() => {
     isDark = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
     if (isDark) document.documentElement.classList.add('dark');
+
+    // Check if already authenticated in this browser session
+    isAuthenticated = sessionStorage.getItem('billshare_session') === '1';
   });
 
   function toggleTheme() {
@@ -102,6 +107,10 @@
     showClearModal = false;
   }
 </script>
+
+{#if !isAuthenticated}
+  <PinModal on:authenticated={() => isAuthenticated = true} />
+{/if}
 
 <div class="min-h-screen p-4 md:p-8 flex flex-col items-center gap-4 pb-32 transition-colors duration-300 bg-stone-50">
   

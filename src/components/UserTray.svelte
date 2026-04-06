@@ -1,5 +1,5 @@
 <script>
-  import { users, PASTEL_COLORS } from '../store.js';
+  import { users, transactions, PASTEL_COLORS } from '../store.js';
   import { dndzone, TRIGGERS } from 'svelte-dnd-action';
   import { Trash2, AlertCircle, X } from 'lucide-svelte';
 
@@ -59,6 +59,48 @@
      $users = $users.map(u => u.id === userId ? { ...u, color: color } : u);
      activePickerId = null;
   }
+
+  // Spender stats: how much each user actually paid across all transactions
+  $: spenderStats = (() => {
+    const stats = $users.map(user => {
+      let totalPaid = 0;
+      $transactions.forEach(tx => {
+        const txAmount = tx.qty * tx.price;
+        let remaining = txAmount;
+        let customCount = 0;
+        tx.paidBy.forEach(p => {
+          if (p.customPaidAmount !== undefined) {
+            remaining -= p.customPaidAmount;
+            customCount++;
+          }
+        });
+        const autoCount = tx.paidBy.length - customCount;
+        const autoAmt = autoCount > 0 ? Math.max(0, remaining / autoCount) : 0;
+        tx.paidBy.forEach(p => {
+          const uid = p.originalUserId || p.id;
+          if (uid === user.id) {
+            totalPaid += p.customPaidAmount !== undefined ? p.customPaidAmount : autoAmt;
+          }
+        });
+      });
+      return { ...user, totalPaid };
+    });
+    return stats.sort((a, b) => b.totalPaid - a.totalPaid);
+  })();
+
+  $: maxPaid = spenderStats.length > 0 ? Math.max(...spenderStats.map(s => s.totalPaid), 1) : 1;
+  $: totalPaidAll = spenderStats.reduce((sum, s) => sum + s.totalPaid, 0);
+
+  const rankEmoji = ['🥇', '🥈', '🥉'];
+
+  function getFunLabel(stat, rank, total) {
+    if (total === 0) return '🦗 ยังไม่มีใครจ่ายเลย';
+    if (stat.totalPaid === 0) return '🪨 ตังค์อยู่ที่ไหน??';
+    if (rank === 0) return 'Top Spender';
+    if (rank === 1) return '😤 เกือบแล้ว';
+    if (rank === spenderStats.length - 1 && stat.totalPaid < total / spenderStats.length * 0.5) return '👀 แอบเบี้ยว';
+    return '👌 โอเค';
+  }
 </script>
 
 <div class="flex flex-col gap-3 min-h-[100px] relative"
@@ -110,6 +152,46 @@
     </div>
   {/each}
 </div>
+
+<!-- {#if spenderStats.length > 0}
+  <div class="mt-4 rounded-2xl border border-stone-200 bg-stone-50 overflow-hidden shadow-sm">
+    <div class="flex items-center gap-2 px-3 pt-3 pb-2">
+      <span class="text-base">💸</span>
+      <span class="text-xs font-semibold text-stone-500 uppercase tracking-wide">ใครจ่ายเท่าไหร่</span>
+    </div>
+
+    <div class="flex flex-col gap-1 px-3 pb-3">
+      {#each spenderStats as stat, i}
+        {@const barPct = maxPaid > 0 ? (stat.totalPaid / maxPaid) * 100 : 0}
+        {@const label = getFunLabel(stat, i, totalPaidAll)}
+        <div class="flex flex-col gap-0.5">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="text-sm shrink-0">{i < 3 ? rankEmoji[i] : '▪️'}</span>
+              <button
+                type="button"
+                class="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[9px] shrink-0 border {stat.color}"
+              >{stat.name.substring(0, 2).trim()}</button>
+              <span class="text-xs text-stone-700 font-medium truncate">{stat.name}</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[10px] text-stone-400">{label}</span>
+              <span class="text-xs font-semibold text-stone-700 tabular-nums">
+                {stat.totalPaid > 0 ? '฿' + stat.totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '฿0'}
+              </span>
+            </div>
+          </div>
+          <div class="h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-500 {stat.color.split(' ')[0].replace('-200', '-400')}"
+              style="width: {barPct}%"
+            ></div>
+          </div>
+        </div>
+      {/each}
+    </div>
+  </div>
+{/if} -->
 
 {#if showDuplicateModal}
   <div class="fixed inset-0 z-[100] flex items-center justify-center bg-[#1c1917]/40 backdrop-blur-sm px-4">
