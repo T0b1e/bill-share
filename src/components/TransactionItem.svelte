@@ -21,16 +21,13 @@
   let showUserPickerModal = false;
   let pickerTarget = null; // 'paidBy' | 'paidFor'
   let pickerSelected = new Set();
-
-  $: alreadyAddedIds = (() => {
-    if (!pickerTarget) return new Set();
-    const items = pickerTarget === 'paidBy' ? transaction.paidBy : transaction.paidFor;
-    return new Set(items.map(u => u.originalUserId || u.id));
-  })();
+  let originalPickerIds = new Set();
 
   function openUserPicker(target) {
     pickerTarget = target;
-    pickerSelected = new Set();
+    const items = target === 'paidBy' ? transaction.paidBy : transaction.paidFor;
+    originalPickerIds = new Set(items.map(u => u.originalUserId || u.id));
+    pickerSelected = new Set(originalPickerIds);
     showUserPickerModal = true;
   }
 
@@ -38,6 +35,7 @@
     showUserPickerModal = false;
     pickerTarget = null;
     pickerSelected = new Set();
+    originalPickerIds = new Set();
   }
 
   function toggleUserSelection(userId) {
@@ -47,16 +45,29 @@
     pickerSelected = s;
   }
 
-  function confirmUserSelection() {
-    if (pickerSelected.size === 0) { closeUserPicker(); return; }
+  function toggleSelectAll() {
+    if (pickerSelected.size === $users.length) {
+      // Deselect all
+      pickerSelected = new Set();
+    } else {
+      // Select all
+      pickerSelected = new Set($users.map(u => u.id));
+    }
+  }
 
-    const newItems = [...pickerSelected].map(userId => {
-      const user = $users.find(u => u.id === userId);
-      return { ...user, originalUserId: user.id, id: uuidv4(), isTrayItem: false };
-    });
+  function confirmUserSelection() {
+    const toAdd = [...pickerSelected].filter(id => !originalPickerIds.has(id));
+    const toRemove = [...originalPickerIds].filter(id => !pickerSelected.has(id));
+
+    if (toAdd.length === 0 && toRemove.length === 0) { closeUserPicker(); return; }
 
     if (pickerTarget === 'paidBy') {
-      const merged = removeDuplicates([...transaction.paidBy, ...newItems]);
+      let list = transaction.paidBy.filter(u => !toRemove.includes(u.originalUserId || u.id));
+      const newItems = toAdd.map(userId => {
+        const user = $users.find(u => u.id === userId);
+        return { ...user, originalUserId: user.id, id: uuidv4(), isTrayItem: false };
+      });
+      const merged = removeDuplicates([...list, ...newItems]);
       if ($autoApplyPayer) {
         $transactions = $transactions.map(tx => {
           if (tx.id === transaction.id) return { ...tx, paidBy: merged };
@@ -68,12 +79,17 @@
         );
       }
     } else {
+      let list = transaction.paidFor.filter(u => !toRemove.includes(u.originalUserId || u.id));
+      const newItems = toAdd.map(userId => {
+        const user = $users.find(u => u.id === userId);
+        return { ...user, originalUserId: user.id, id: uuidv4(), isTrayItem: false };
+      });
       const cleanItems = newItems.map(item => {
         const c = { ...item };
         delete c.customPaidAmount;
         return c;
       });
-      const merged = removeDuplicates([...transaction.paidFor, ...cleanItems]);
+      const merged = removeDuplicates([...list, ...cleanItems]);
       $transactions = $transactions.map(tx =>
         tx.id === transaction.id ? { ...tx, paidFor: merged } : tx
       );
@@ -356,27 +372,36 @@
       </h3>
       <p class="text-xs text-stone-400 mb-4">เลือกได้หลายคน</p>
 
+      <!-- Select All Checkbox -->
+      <button
+        type="button"
+        on:click={toggleSelectAll}
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-stone-300 bg-stone-50 hover:bg-stone-100 transition-all text-left cursor-pointer mb-3 w-full"
+      >
+        <div class="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border {pickerSelected.size === $users.length ? 'border-stone-800 bg-stone-800' : 'border-stone-300'}">
+          {#if pickerSelected.size === $users.length}
+            <Check size={10} class="text-white" />
+          {/if}
+        </div>
+        <span class="text-xs text-stone-600 flex-1 font-medium">เลือกทั้งหมด</span>
+      </button>
+
       <div class="flex flex-col gap-2 mb-5 max-h-64 overflow-y-auto">
         {#each $users as user}
-          {@const isAdded = alreadyAddedIds.has(user.id)}
           {@const isSelected = pickerSelected.has(user.id)}
           <button
             type="button"
-            on:click={() => !isAdded && toggleUserSelection(user.id)}
-            class="flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left
-              {isAdded
-                ? 'opacity-40 cursor-not-allowed border-stone-100 bg-stone-50'
-                : isSelected
-                  ? 'border-stone-400 bg-stone-50 cursor-pointer'
-                  : 'border-stone-200 hover:border-stone-300 bg-white cursor-pointer'}"
+            on:click={() => toggleUserSelection(user.id)}
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left cursor-pointer
+              {isSelected
+                ? 'border-stone-400 bg-stone-50'
+                : 'border-stone-200 hover:border-stone-300 bg-white'}"
           >
             <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border flex-shrink-0 {user.color}">
               {user.name.substring(0, 2).trim()}
             </div>
             <span class="text-sm text-stone-700 flex-1 font-medium">{user.name}</span>
-            {#if isAdded}
-              <Check size={15} class="text-stone-400 flex-shrink-0" />
-            {:else if isSelected}
+            {#if isSelected}
               <div class="w-4 h-4 rounded bg-stone-800 flex items-center justify-center flex-shrink-0">
                 <Check size={10} class="text-white" />
               </div>
@@ -393,10 +418,9 @@
         </button>
         <button
           on:click={confirmUserSelection}
-          disabled={pickerSelected.size === 0}
-          class="flex-1 bg-stone-800 hover:bg-stone-900 disabled:opacity-40 text-white py-2.5 rounded-xl font-medium cursor-pointer transition shadow-sm active:scale-95 text-sm"
+          class="flex-1 bg-stone-800 hover:bg-stone-900 text-white py-2.5 rounded-xl font-medium cursor-pointer transition shadow-sm active:scale-95 text-sm"
         >
-          เพิ่ม{pickerSelected.size > 0 ? ` (${pickerSelected.size})` : ''}
+          ยืนยัน{pickerSelected.size > 0 ? ` (${pickerSelected.size})` : ''}
         </button>
       </div>
     </div>

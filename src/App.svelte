@@ -1,21 +1,16 @@
 <script>
-  import { users, transactions, taxes, settlement, PASTEL_COLORS, autoApplyPayer } from './store.js';
+  import { users, transactions, taxes, settlement, PASTEL_COLORS, autoApplyPayer, poolSettings } from './store.js';
   import UserTray from './components/UserTray.svelte';
   import TransactionList from './components/TransactionList.svelte';
   import SettlementSummary from './components/SettlementSummary.svelte';
-  import PinModal from './components/PinModal.svelte';
   import { Plus, Sun, Moon, X } from 'lucide-svelte';
   import { onMount } from 'svelte';
 
   let isDark = false;
-  let isAuthenticated = false;
 
   onMount(() => {
     isDark = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
     if (isDark) document.documentElement.classList.add('dark');
-
-    // Check if already authenticated in this browser session
-    isAuthenticated = sessionStorage.getItem('billshare_session') === '1';
   });
 
   function toggleTheme() {
@@ -97,6 +92,7 @@
   }
 
   let showClearModal = false;
+  let activeTab = 'self'; // 'self' or 'pool'
 
   function clearTransactions() {
     showClearModal = true;
@@ -107,10 +103,6 @@
     showClearModal = false;
   }
 </script>
-
-{#if !isAuthenticated}
-  <PinModal on:authenticated={() => isAuthenticated = true} />
-{/if}
 
 <div class="min-h-screen p-4 md:p-8 flex flex-col items-center gap-4 pb-32 transition-colors duration-300 bg-stone-50">
   
@@ -153,14 +145,101 @@
     </div>
 
     <!-- Right Side Tray -->
-    <div class="lg:col-span-2 md:sticky md:top-8 bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col w-full h-auto">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-lg font-medium text-stone-800">เพื่อนๆ</h2>
-        <button on:click={addUser} class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors p-2 hover:bg-stone-50 rounded-lg cursor-pointer font-medium" title="เพิ่มเพื่อน">
-          <Plus size={18} /> เพิ่มรายการเพื่อน
+    <div class="lg:col-span-2 md:sticky md:top-8 bg-white rounded-2xl shadow-sm border border-stone-200 flex flex-col w-full h-auto overflow-hidden">
+      <!-- Tab Navigation -->
+      <div class="flex border-b border-stone-200">
+        <button
+          on:click={() => activeTab = 'self'}
+          class="flex-1 py-4 px-6 font-medium text-sm transition-colors {activeTab === 'self'
+            ? 'text-stone-800 border-b-2 border-stone-800 -mb-px'
+            : 'text-stone-500 hover:text-stone-700'}"
+        >
+          แยกกันจ่าย
+        </button>
+        <button
+          on:click={() => activeTab = 'pool'}
+          class="flex-1 py-4 px-6 font-medium text-sm transition-colors {activeTab === 'pool'
+            ? 'text-stone-800 border-b-2 border-stone-800 -mb-px'
+            : 'text-stone-500 hover:text-stone-700'}"
+        >
+          กองกลาง
         </button>
       </div>
-      <UserTray />
+
+      <!-- Tab Content -->
+      <div class="flex-1 p-6 flex flex-col">
+        {#if activeTab === 'self'}
+          <!-- Self Paid Tab -->
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-medium text-stone-800">เพื่อนๆ</h2>
+            <button on:click={addUser} class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors p-2 hover:bg-stone-50 rounded-lg cursor-pointer font-medium" title="เพิ่มเพื่อน">
+              <Plus size={18} />
+            </button>
+          </div>
+          <UserTray />
+        {:else}
+          <!-- Pool Tab -->
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-medium text-stone-800">ตั้งค่า Pool</h3>
+            <button on:click={addUser} class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors p-2 hover:bg-stone-50 rounded-lg cursor-pointer font-medium" title="เพิ่มเพื่อน">
+              <Plus size={18} />
+            </button>
+          </div>
+
+          <!-- Pool Enable Toggle -->
+          <label class="flex items-center gap-3 mb-6 p-4 bg-stone-50 rounded-xl border border-stone-200 cursor-pointer hover:bg-stone-100 transition-colors">
+            <input
+              type="checkbox"
+              bind:checked={$poolSettings.enabled}
+              class="w-5 h-5 text-stone-800 rounded border-stone-300 cursor-pointer accent-stone-700"
+            />
+            <div>
+              <p class="font-medium text-stone-800 text-sm">เปิดใช้งาน Pool</p>
+              <p class="text-xs text-stone-500 mt-0.5">แบ่งค่าใช้จ่ายเท่าๆ กันให้ทุกคน</p>
+            </div>
+          </label>
+
+          {#if $poolSettings.enabled}
+            <!-- Excluded Users Section -->
+            <div class="p-4 bg-amber-50 rounded-xl border border-amber-200">
+              <p class="text-sm font-medium text-amber-900 mb-3">ยกเว้นจาก Pool:</p>
+              <div class="flex flex-col gap-2">
+                {#each $users as user}
+                  <label class="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors border border-transparent">
+                    <input
+                      type="checkbox"
+                      checked={$poolSettings.excludedUsers.includes(user.id)}
+                      on:change={(e) => {
+                        const excluded = new Set($poolSettings.excludedUsers);
+                        if (e.target.checked) {
+                          excluded.add(user.id);
+                        } else {
+                          excluded.delete(user.id);
+                        }
+                        $poolSettings.excludedUsers = Array.from(excluded);
+                      }}
+                      class="w-4 h-4 rounded border-amber-300 cursor-pointer accent-amber-700"
+                    />
+                    <div class="flex items-center gap-2">
+                      <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border {user.color}">
+                        {user.name.substring(0, 2).trim()}
+                      </div>
+                      <span class="text-sm text-amber-900 font-medium">{user.name}</span>
+                    </div>
+                  </label>
+                {/each}
+              </div>
+              <p class="text-xs text-amber-700 mt-3 p-2 bg-amber-100 rounded italic">
+                คนที่เลือกจะคิดค่าใช้จ่ายเป็นรายบุคคลแทน
+              </p>
+            </div>
+          {:else}
+            <div class="text-center py-8 text-stone-400">
+              <p class="text-sm">เปิดใช้งาน Pool เพื่อกำหนดค่าตั้ง</p>
+            </div>
+          {/if}
+        {/if}
+      </div>
     </div>
   </div>
 
@@ -173,8 +252,8 @@
 </div>
 
 {#if showClearModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1917]/40 backdrop-blur-sm px-4">
-    <div class="bg-[#ffffff] rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-6 relative">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1917]/40 backdrop-blur-sm px-4" on:click={() => showClearModal = false}>
+    <div class="bg-[#ffffff] rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-6 relative" on:click|stopPropagation>
        <button on:click={() => showClearModal = false} class="absolute top-4 right-4 text-[#a8a29e] hover:text-[#44403c] cursor-pointer">
          <X size={20} />
        </button>

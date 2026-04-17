@@ -44,15 +44,31 @@ export const transactions = createPersistedStore('billshare_transactions', [
 
 export const taxes = createPersistedStore('billshare_taxes', { serviceCharge: 0, vat: 0 });
 
+export const poolSettings = createPersistedStore('billshare_poolSettings', {
+  enabled: false,
+  excludedUsers: []
+});
+
 export const settlement = derived(
-  [users, transactions, taxes],
-  ([$users, $transactions, $taxes]) => {
+  [users, transactions, taxes, poolSettings],
+  ([$users, $transactions, $taxes, $poolSettings]) => {
     const balances = {};
     $users.forEach(user => {
       balances[user.id] = 0;
     });
 
     let totalBaseAmount = 0;
+    let pooledAmount = 0;
+    const pooledUserIds = new Set();
+
+    // Identify pooled users
+    if ($poolSettings.enabled) {
+      $users.forEach(user => {
+        if (!$poolSettings.excludedUsers.includes(user.id)) {
+          pooledUserIds.add(user.id);
+        }
+      });
+    }
 
     $transactions.forEach(transaction => {
       const transactionAmount = transaction.qty * transaction.price;
@@ -62,43 +78,80 @@ export const settlement = derived(
       const hasEaters = transaction.paidFor.length > 0;
 
       if (hasPayers && hasEaters) {
-        const amountPerEater = transactionAmount / transaction.paidFor.length;
-        
-        let remainingToPay = transactionAmount;
-        let explicitPayersCount = 0;
-        
-        // Calculate explicit custom payments
-        transaction.paidBy.forEach(payer => {
-          if (payer.customPaidAmount !== undefined) {
-             remainingToPay -= payer.customPaidAmount;
-             explicitPayersCount += 1;
-          }
-        });
-        
-        const autoPayersCount = transaction.paidBy.length - explicitPayersCount;
-        const autoPaidAmountPerPerson = autoPayersCount > 0 ? Math.max(0, remainingToPay / autoPayersCount) : 0;
+        // Separate pooled and non-pooled eaters
+        const pooledEaters = [];
+        const nonPooledEaters = [];
 
-        // Credit payers
-        transaction.paidBy.forEach(payer => {
-          const userId = payer.originalUserId || payer.id;
-          const amountPaid = payer.customPaidAmount !== undefined 
-            ? payer.customPaidAmount 
-            : autoPaidAmountPerPerson;
-            
-          if (balances[userId] !== undefined) {
-            balances[userId] += amountPaid;
-          }
-        });
-
-        // Debit eaters
         transaction.paidFor.forEach(eater => {
+          const userId = eater.originalUserId || eater.id;
+          if ($poolSettings.enabled && pooledUserIds.has(userId)) {
+            pooledEaters.push(eater);
+          } else {
+            nonPooledEaters.push(eater);
+          }
+        });
+
+        // Handle non-pooled eaters normally
+        nonPooledEaters.forEach(eater => {
+          const amountPerEater = transactionAmount / transaction.paidFor.length;
           const userId = eater.originalUserId || eater.id;
           if (balances[userId] !== undefined) {
             balances[userId] -= amountPerEater;
           }
         });
+
+        // Handle pooled eaters and payers
+        if (pooledEaters.length > 0) {
+          let remainingToPay = transactionAmount;
+          let explicitPayersCount = 0;
+
+          transaction.paidBy.forEach(payer => {
+            if (payer.customPaidAmount !== undefined) {
+              remainingToPay -= payer.customPaidAmount;
+              explicitPayersCount += 1;
+            }
+          });
+
+          const autoPayersCount = transaction.paidBy.length - explicitPayersCount;
+          const autoPaidAmountPerPerson = autoPayersCount > 0 ? Math.max(0, remainingToPay / autoPayersCount) : 0;
+
+          // Credit payers
+          transaction.paidBy.forEach(payer => {
+            const userId = payer.originalUserId || payer.id;
+            const amountPaid = payer.customPaidAmount !== undefined
+              ? payer.customPaidAmount
+              : autoPaidAmountPerPerson;
+
+            if (balances[userId] !== undefined) {
+              balances[userId] += amountPaid;
+            }
+          });
+
+          // For pooled eaters, add to pool if pool is enabled
+          if ($poolSettings.enabled) {
+            pooledAmount += transactionAmount;
+            // Don't debit individuals yet, will split pool among all pooled users
+          } else {
+            // Normal split among pooled eaters
+            const amountPerEater = transactionAmount / pooledEaters.length;
+            pooledEaters.forEach(eater => {
+              const userId = eater.originalUserId || eater.id;
+              if (balances[userId] !== undefined) {
+                balances[userId] -= amountPerEater;
+              }
+            });
+          }
+        }
       }
     });
+
+    // If pool is enabled, split pooled amount equally among all pooled users
+    if ($poolSettings.enabled && pooledUserIds.size > 0) {
+      const amountPerPooledUser = pooledAmount / pooledUserIds.size;
+      pooledUserIds.forEach(userId => {
+        balances[userId] -= amountPerPooledUser;
+      });
+    }
 
     const scPercentage = $taxes.serviceCharge / 100;
     const vatPercentage = $taxes.vat / 100;
