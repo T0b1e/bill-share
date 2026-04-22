@@ -1,26 +1,41 @@
 <script>
-  import { users, transactions, taxes, settlement, PASTEL_COLORS, autoApplyPayer, poolSettings } from './store.js';
-  import UserTray from './components/UserTray.svelte';
-  import TransactionList from './components/TransactionList.svelte';
-  import SettlementSummary from './components/SettlementSummary.svelte';
-  import { Plus, Sun, Moon, X } from 'lucide-svelte';
-  import { onMount } from 'svelte';
+  import {
+    users,
+    transactions,
+    taxes,
+    settlement,
+    PASTEL_COLORS,
+    autoApplyPayer,
+    poolSettings,
+  } from "./store.js";
+  import UserTray from "./components/UserTray.svelte";
+  import TransactionList from "./components/TransactionList.svelte";
+  import SettlementSummary from "./components/SettlementSummary.svelte";
+  import { Plus, Sun, Moon, X } from "lucide-svelte";
+  import Calculator from "./components/Calculator.svelte";
+  import CookieBanner from "./components/CookieBanner.svelte";
+  import PrivacyPolicy from "./components/PrivacyPolicy.svelte";
+  import TermsOfUse from "./components/TermsOfUse.svelte";
+  import { onMount } from "svelte";
 
   let isDark = false;
 
   onMount(() => {
-    isDark = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if (isDark) document.documentElement.classList.add('dark');
+    isDark =
+      localStorage.getItem("theme") === "dark" ||
+      (!("theme" in localStorage) &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    if (isDark) document.documentElement.classList.add("dark");
   });
 
   function toggleTheme() {
     isDark = !isDark;
     if (isDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }
 
@@ -31,38 +46,38 @@
   function addUser() {
     const nextColor = PASTEL_COLORS[$users.length % PASTEL_COLORS.length];
     let userCount = $users.length + 1;
-    
+
     // Ensure unique name for new user
-    while ($users.some(user => user.name === `เพื่อน ${userCount}`)) {
+    while ($users.some((user) => user.name === `เพื่อน ${userCount}`)) {
       userCount++;
     }
-    
-    const newUser = { 
-      id: uuidv4(), 
-      name: `เพื่อน ${userCount}`, 
-      color: nextColor 
+
+    const newUser = {
+      id: uuidv4(),
+      name: `เพื่อน ${userCount}`,
+      color: nextColor,
     };
-    
+
     $users = [...$users, newUser];
   }
 
   function handleToggleAutoApply() {
     const hasTransactions = $transactions.length > 0;
-    
+
     if ($autoApplyPayer && hasTransactions) {
       const firstTransactionPayers = $transactions[0].paidBy;
-      
+
       $transactions = $transactions.map((transaction, index) => {
         // Keep the first transaction as the template
         if (index === 0) {
           return transaction;
         }
-        
+
         // Clone payers with new unique IDs for the current transaction
-        const clonedPayers = firstTransactionPayers.map(payer => {
+        const clonedPayers = firstTransactionPayers.map((payer) => {
           return { ...payer, id: uuidv4() };
         });
-        
+
         return { ...transaction, paidBy: clonedPayers };
       });
     }
@@ -74,7 +89,7 @@
 
     if ($autoApplyPayer && hasExistingTransactions) {
       const firstTransactionPayers = $transactions[0].paidBy;
-      initialPaidBy = firstTransactionPayers.map(payer => {
+      initialPaidBy = firstTransactionPayers.map((payer) => {
         return { ...payer, id: uuidv4() };
       });
     }
@@ -85,14 +100,36 @@
       qty: 1,
       price: 0,
       paidBy: initialPaidBy,
-      paidFor: []
+      paidFor: [],
     };
 
     $transactions = [...$transactions, newTransaction];
   }
 
   let showClearModal = false;
-  let activeTab = 'self'; // 'self' or 'pool'
+  let showPrivacy = false;
+  let showTerms = false;
+  let activeTab = "self"; // 'self' or 'pool'
+  let excludeWarning = ""; // Warning message for pool exclusion
+
+  function handlePoolExclusion(userId, isChecked) {
+    const excluded = new Set($poolSettings.excludedUsers);
+    if (isChecked) {
+      excluded.add(userId);
+    } else {
+      excluded.delete(userId);
+    }
+
+    // Validate: can't exclude all users from pool
+    const pooledCount = $users.length - excluded.size;
+    if (pooledCount === 0) {
+      excludeWarning = "ต้องมีคนอย่างน้อย 1 คนในกองกลาง";
+      return;
+    }
+
+    excludeWarning = "";
+    $poolSettings.excludedUsers = Array.from(excluded);
+  }
 
   function clearTransactions() {
     showClearModal = true;
@@ -104,33 +141,71 @@
   }
 </script>
 
-<div class="min-h-screen p-4 md:p-8 flex flex-col items-center gap-4 pb-32 transition-colors duration-300 bg-stone-50">
-  
+<div
+  class="min-h-screen p-4 md:p-8 flex flex-col items-center gap-4 pb-32 transition-colors duration-300 bg-stone-50"
+>
   <div class="w-full max-w-7xl flex justify-between items-center px-2">
     <div class="flex items-center gap-3">
-      <img src="/bill-shared.png" alt="Bill Share Logo" class="w-10 h-10 shadow-sm rounded-xl border border-stone-100" />
-      <h1 class="text-3xl font-bold tracking-tighter text-stone-800 transition-colors">หารเงินจ้าฟ</h1>
+      <img
+        src="/bill-shared.png"
+        alt="Bill Share Logo"
+        class="w-10 h-10 shadow-sm rounded-xl border border-stone-100"
+      />
+      <h1
+        class="text-3xl font-bold tracking-tighter text-stone-800 transition-colors"
+      >
+        หารเงินจ้าฟ
+      </h1>
     </div>
-    <button on:click={toggleTheme} class="p-2.5 rounded-xl hover:bg-stone-200 text-stone-600 transition-all cursor-pointer active:scale-95 shadow-sm bg-white border border-stone-200" title="Toggle Theme">
-      {#if isDark} <Sun size={20} /> {:else} <Moon size={20} /> {/if}
+    <button
+      on:click={toggleTheme}
+      class="p-2.5 rounded-xl hover:bg-stone-200 text-stone-600 transition-all cursor-pointer active:scale-95 shadow-sm bg-white border border-stone-200"
+      title="Toggle Theme"
+    >
+      {#if isDark}
+        <Sun size={20} />
+      {:else}
+        <Moon size={20} />
+      {/if}
     </button>
   </div>
 
-  <div class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
+  <div
+    class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-6 gap-6 items-start"
+  >
     <!-- Main Billing Element -->
-    <div class="lg:col-span-4 flex flex-col gap-6 w-full shadow-sm rounded-2xl bg-white border border-stone-200">
-      <div class="p-6 md:p-8 bg-white rounded-t-2xl border-b border-stone-100 flex flex-col min-h-[400px]">
+    <div
+      class="lg:col-span-4 flex flex-col gap-6 w-full shadow-sm rounded-2xl bg-white border border-stone-200"
+    >
+      <div
+        class="p-6 md:p-8 bg-white rounded-t-2xl border-b border-stone-100 flex flex-col min-h-[400px]"
+      >
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-medium tracking-tight text-stone-800">รายการค่าใช้จ่าย</h2>
+          <h2 class="text-xl font-medium tracking-tight text-stone-800">
+            รายการค่าใช้จ่าย
+          </h2>
           <div class="flex items-center gap-3">
-            <label class="flex items-center gap-2 text-sm text-stone-600 cursor-pointer select-none border border-stone-200 bg-stone-50 px-3 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
-              <input type="checkbox" bind:checked={$autoApplyPayer} on:change={handleToggleAutoApply} class="w-4 h-4 text-stone-800 rounded border-stone-300 cursor-pointer accent-stone-700 mt-0.5" />
+            <label
+              class="flex items-center gap-2 text-sm text-stone-600 cursor-pointer select-none border border-stone-200 bg-stone-50 px-3 py-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+            >
+              <input
+                type="checkbox"
+                bind:checked={$autoApplyPayer}
+                on:change={handleToggleAutoApply}
+                class="w-4 h-4 text-stone-800 rounded border-stone-300 cursor-pointer accent-stone-700 mt-0.5"
+              />
               <span class="font-medium">เลี้ยง</span>
             </label>
-            <button on:click={clearTransactions} class="flex items-center gap-1.5 text-rose-500 hover:text-rose-600 transition-colors bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg text-sm font-medium border border-rose-200 cursor-pointer shadow-sm active:scale-95">
+            <button
+              on:click={clearTransactions}
+              class="flex items-center gap-1.5 text-rose-500 hover:text-rose-600 transition-colors bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg text-sm font-medium border border-rose-200 cursor-pointer shadow-sm active:scale-95"
+            >
               เคลียร์ทุกรายการ
             </button>
-            <button on:click={addTransaction} class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors bg-stone-50 hover:bg-stone-100 px-3 py-1.5 rounded-lg text-sm font-medium border border-stone-200">
+            <button
+              on:click={addTransaction}
+              class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors bg-stone-50 hover:bg-stone-100 px-3 py-1.5 rounded-lg text-sm font-medium border border-stone-200"
+            >
               <Plus size={16} /> เพิ่มรายการ
             </button>
           </div>
@@ -139,26 +214,32 @@
       </div>
 
       <div class="p-3 md:p-8 bg-stone-50/50 rounded-b-2xl">
-        <h2 class="text-xl font-medium tracking-tight text-stone-800 mb-6">สรุปและแบ่งบิล</h2>
+        <h2 class="text-xl font-medium tracking-tight text-stone-800 mb-6">
+          สรุปและแบ่งบิล
+        </h2>
         <SettlementSummary />
       </div>
     </div>
 
     <!-- Right Side Tray -->
-    <div class="lg:col-span-2 md:sticky md:top-8 bg-white rounded-2xl shadow-sm border border-stone-200 flex flex-col w-full h-auto overflow-hidden">
+    <div
+      class="lg:col-span-2 md:sticky md:top-8 bg-white rounded-2xl shadow-sm border border-stone-200 flex flex-col w-full h-auto overflow-hidden"
+    >
       <!-- Tab Navigation -->
       <div class="flex border-b border-stone-200">
         <button
-          on:click={() => activeTab = 'self'}
-          class="flex-1 py-4 px-6 font-medium text-sm transition-colors {activeTab === 'self'
+          on:click={() => (activeTab = "self")}
+          class="flex-1 py-4 px-6 font-medium text-sm transition-colors {activeTab ===
+          'self'
             ? 'text-stone-800 border-b-2 border-stone-800 -mb-px'
             : 'text-stone-500 hover:text-stone-700'}"
         >
           แยกกันจ่าย
         </button>
         <button
-          on:click={() => activeTab = 'pool'}
-          class="flex-1 py-4 px-6 font-medium text-sm transition-colors {activeTab === 'pool'
+          on:click={() => (activeTab = "pool")}
+          class="flex-1 py-4 px-6 font-medium text-sm transition-colors {activeTab ===
+          'pool'
             ? 'text-stone-800 border-b-2 border-stone-800 -mb-px'
             : 'text-stone-500 hover:text-stone-700'}"
         >
@@ -168,12 +249,16 @@
 
       <!-- Tab Content -->
       <div class="flex-1 p-6 flex flex-col">
-        {#if activeTab === 'self'}
+        {#if activeTab === "self"}
           <!-- Self Paid Tab -->
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-lg font-medium text-stone-800">เพื่อนๆ</h2>
-            <button on:click={addUser} class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors p-2 hover:bg-stone-50 rounded-lg cursor-pointer font-medium" title="เพิ่มเพื่อน">
-              <Plus size={18} />
+            <button
+              on:click={addUser}
+              class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors p-2 hover:bg-stone-50 rounded-lg cursor-pointer"
+              title="เพิ่มเพื่อน"
+            >
+              เพิ่มเพื่อน <Plus size={18} />
             </button>
           </div>
           <UserTray />
@@ -181,13 +266,19 @@
           <!-- Pool Tab -->
           <div class="flex items-center justify-between mb-6">
             <h3 class="text-lg font-medium text-stone-800">ตั้งค่า Pool</h3>
-            <button on:click={addUser} class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors p-2 hover:bg-stone-50 rounded-lg cursor-pointer font-medium" title="เพิ่มเพื่อน">
-              <Plus size={18} />
+            <button
+              on:click={addUser}
+              class="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 transition-colors p-2 hover:bg-stone-50 rounded-lg cursor-pointer"
+              title="เพิ่มเพื่อน"
+            >
+              เพิ่มเพื่อน <Plus size={18} />
             </button>
           </div>
 
           <!-- Pool Enable Toggle -->
-          <label class="flex items-center gap-3 mb-6 p-4 bg-stone-50 rounded-xl border border-stone-200 cursor-pointer hover:bg-stone-100 transition-colors">
+          <label
+            class="flex items-center gap-3 mb-6 p-4 bg-stone-50 rounded-xl border border-stone-200 cursor-pointer hover:bg-stone-100 transition-colors"
+          >
             <input
               type="checkbox"
               bind:checked={$poolSettings.enabled}
@@ -195,43 +286,57 @@
             />
             <div>
               <p class="font-medium text-stone-800 text-sm">เปิดใช้งาน Pool</p>
-              <p class="text-xs text-stone-500 mt-0.5">แบ่งค่าใช้จ่ายเท่าๆ กันให้ทุกคน</p>
+              <p class="text-xs text-stone-500 mt-0.5">
+                แบ่งค่าใช้จ่ายเท่าๆ กันให้ทุกคน
+              </p>
             </div>
           </label>
 
           {#if $poolSettings.enabled}
             <!-- Excluded Users Section -->
             <div class="p-4 bg-amber-50 rounded-xl border border-amber-200">
-              <p class="text-sm font-medium text-amber-900 mb-3">ยกเว้นจาก Pool:</p>
+              <p class="text-sm font-medium text-amber-900 mb-3">
+                ยกเว้นจาก Pool:
+              </p>
               <div class="flex flex-col gap-2">
                 {#each $users as user}
-                  <label class="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors border border-transparent">
+                  <label
+                    class="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors border border-transparent"
+                  >
                     <input
                       type="checkbox"
                       checked={$poolSettings.excludedUsers.includes(user.id)}
-                      on:change={(e) => {
-                        const excluded = new Set($poolSettings.excludedUsers);
-                        if (e.target.checked) {
-                          excluded.add(user.id);
-                        } else {
-                          excluded.delete(user.id);
-                        }
-                        $poolSettings.excludedUsers = Array.from(excluded);
-                      }}
+                      on:change={(e) =>
+                        handlePoolExclusion(user.id, e.target.checked)}
                       class="w-4 h-4 rounded border-amber-300 cursor-pointer accent-amber-700"
                     />
                     <div class="flex items-center gap-2">
-                      <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border {user.color}">
+                      <div
+                        class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border {user.color}"
+                      >
                         {user.name.substring(0, 2).trim()}
                       </div>
-                      <span class="text-sm text-amber-900 font-medium">{user.name}</span>
+                      <span class="text-sm text-amber-900 font-medium"
+                        >{user.name}</span
+                      >
                     </div>
                   </label>
                 {/each}
               </div>
-              <p class="text-xs text-amber-700 mt-3 p-2 bg-amber-100 rounded italic">
-                คนที่เลือกจะคิดค่าใช้จ่ายเป็นรายบุคคลแทน
-              </p>
+
+              {#if excludeWarning}
+                <p
+                  class="text-xs text-rose-700 mt-3 p-2 bg-rose-100 rounded border border-rose-200 font-medium"
+                >
+                  ⚠️ {excludeWarning}
+                </p>
+              {:else}
+                <p
+                  class="text-xs text-amber-700 mt-3 p-2 bg-amber-100 rounded italic"
+                >
+                  คนที่เลือกจะคิดค่าใช้จ่ายเป็นรายบุคคลแทน
+                </p>
+              {/if}
             </div>
           {:else}
             <div class="text-center py-8 text-stone-400">
@@ -244,26 +349,71 @@
   </div>
 
   <!-- Footer -->
-  <footer class="w-full text-center mt-auto pb-0 pt-12 flex justify-center opacity-80 hover:opacity-100 transition-opacity">
-    <a href="https://github.com/T0b1e" target="_blank" rel="noopener noreferrer" class="text-stone-500 font-medium text-sm flex items-center gap-1.5 hover:text-stone-900 transition-colors">
+  <footer class="w-full mt-auto pb-0 pt-12 flex flex-col items-center gap-3 opacity-80 hover:opacity-100 transition-opacity">
+    <a
+      href="https://github.com/T0b1e"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-stone-500 font-medium text-sm flex items-center gap-1.5 hover:text-stone-900 transition-colors"
+    >
       Designed by <span class="font-bold underline decoration-stone-300 underline-offset-2">T0b1e</span>
     </a>
+    <div class="flex items-center gap-4 text-xs text-stone-400">
+      <button on:click={() => showPrivacy = true} class="hover:text-stone-600 transition-colors underline underline-offset-2 cursor-pointer">
+        นโยบายความเป็นส่วนตัว
+      </button>
+      <span>·</span>
+      <button on:click={() => showTerms = true} class="hover:text-stone-600 transition-colors underline underline-offset-2 cursor-pointer">
+        ข้อกำหนดการใช้งาน
+      </button>
+    </div>
   </footer>
 </div>
 
+<Calculator />
+
+<CookieBanner
+  on:openPrivacy={() => showPrivacy = true}
+  on:openTerms={() => showTerms = true}
+/>
+
+<PrivacyPolicy bind:open={showPrivacy} />
+<TermsOfUse bind:open={showTerms} />
+
 {#if showClearModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1917]/40 backdrop-blur-sm px-4" on:click={() => showClearModal = false}>
-    <div class="bg-[#ffffff] rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-6 relative" on:click|stopPropagation>
-       <button on:click={() => showClearModal = false} class="absolute top-4 right-4 text-[#a8a29e] hover:text-[#44403c] cursor-pointer">
-         <X size={20} />
-       </button>
-       <h3 class="text-xl font-semibold text-rose-600 mb-2">เคลียร์ทุกรายการใช่หรือไม่?</h3>
-       <p class="text-sm text-[#78716c] mb-6 tracking-wide">การกระทำนี้ไม่สามารถย้อนกลับได้ (This action cannot be undone.)</p>
-       
-       <div class="flex gap-3">
-         <button on:click={() => showClearModal = false} class="flex-1 bg-[#f5f5f4] hover:bg-[#e7e5e4] text-[#44403c] py-3 rounded-xl font-medium cursor-pointer transition">ยกเลิก (Cancel)</button>
-         <button on:click={confirmClearTransactions} class="flex-1 bg-rose-600 hover:bg-rose-700 text-[#ffffff] py-3 rounded-xl font-medium cursor-pointer transition shadow-sm active:scale-95">ยืนยัน (Confirm)</button>
-       </div>
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1917]/40 backdrop-blur-sm px-4"
+    on:click={() => (showClearModal = false)}
+  >
+    <div
+      class="bg-[#ffffff] rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-6 relative"
+      on:click|stopPropagation
+    >
+      <button
+        on:click={() => (showClearModal = false)}
+        class="absolute top-4 right-4 text-[#a8a29e] hover:text-[#44403c] cursor-pointer"
+      >
+        <X size={20} />
+      </button>
+      <h3 class="text-xl font-semibold text-rose-600 mb-2">
+        เคลียร์ทุกรายการใช่หรือไม่?
+      </h3>
+      <p class="text-sm text-[#78716c] mb-6 tracking-wide">
+        การกระทำนี้ไม่สามารถย้อนกลับได้ (This action cannot be undone.)
+      </p>
+
+      <div class="flex gap-3">
+        <button
+          on:click={() => (showClearModal = false)}
+          class="flex-1 bg-[#f5f5f4] hover:bg-[#e7e5e4] text-[#44403c] py-3 rounded-xl font-medium cursor-pointer transition"
+          >ยกเลิก (Cancel)</button
+        >
+        <button
+          on:click={confirmClearTransactions}
+          class="flex-1 bg-rose-600 hover:bg-rose-700 text-[#ffffff] py-3 rounded-xl font-medium cursor-pointer transition shadow-sm active:scale-95"
+          >ยืนยัน (Confirm)</button
+        >
+      </div>
     </div>
   </div>
 {/if}

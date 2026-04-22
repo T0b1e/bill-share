@@ -222,37 +222,52 @@ export const settlement = derived(
   }
 );
 
-// Sync transactions when users are deleted
+// Sync transactions and pool settings when users are deleted
 users.subscribe($users => {
   const currentUserIds = new Set($users.map(user => user.id));
-  
+
+  // Clean up excluded users in pool settings
+  poolSettings.update($poolSettings => {
+    const updatedExcluded = $poolSettings.excludedUsers.filter(userId =>
+      currentUserIds.has(userId)
+    );
+
+    if (updatedExcluded.length !== $poolSettings.excludedUsers.length) {
+      return {
+        ...$poolSettings,
+        excludedUsers: updatedExcluded
+      };
+    }
+    return $poolSettings;
+  });
+
   transactions.update($transactions => {
     let hasChanges = false;
-    
+
     const updatedTransactions = $transactions.map(transaction => {
       const filteredPaidBy = transaction.paidBy.filter(payer => {
         const userId = payer.originalUserId || payer.id;
         return currentUserIds.has(userId);
       });
-      
+
       const filteredPaidFor = transaction.paidFor.filter(eater => {
         const userId = eater.originalUserId || eater.id;
         return currentUserIds.has(userId);
       });
-      
-      if (filteredPaidBy.length !== transaction.paidBy.length || 
+
+      if (filteredPaidBy.length !== transaction.paidBy.length ||
           filteredPaidFor.length !== transaction.paidFor.length) {
         hasChanges = true;
-        return { 
-          ...transaction, 
-          paidBy: filteredPaidBy, 
-          paidFor: filteredPaidFor 
+        return {
+          ...transaction,
+          paidBy: filteredPaidBy,
+          paidFor: filteredPaidFor
         };
       }
-      
+
       return transaction;
     });
-    
+
     return hasChanges ? updatedTransactions : $transactions;
   });
 });
