@@ -7,11 +7,13 @@
     PASTEL_COLORS,
     autoApplyPayer,
     poolSettings,
+    receiptSettings,
   } from "./store.js";
   import UserTray from "./components/UserTray.svelte";
   import TransactionList from "./components/TransactionList.svelte";
   import SettlementSummary from "./components/SettlementSummary.svelte";
-  import { Plus, Sun, Moon, X } from "lucide-svelte";
+  import FullReceipt from "./components/FullReceipt.svelte";
+  import { Plus, Sun, Moon, X, Receipt } from "lucide-svelte";
   import Calculator from "./components/Calculator.svelte";
   import CookieBanner from "./components/CookieBanner.svelte";
   import PrivacyPolicy from "./components/PrivacyPolicy.svelte";
@@ -214,11 +216,39 @@
       </div>
 
       <div class="p-3 md:p-8 bg-stone-50/50 rounded-b-2xl">
-        <h2 class="text-xl font-medium tracking-tight text-stone-800 mb-6">
-          สรุปและแบ่งบิล
-        </h2>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-medium tracking-tight text-stone-800">
+            สรุปและแบ่งบิล
+          </h2>
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <Receipt size={14} class="text-stone-400" />
+            <span class="text-xs font-medium text-stone-500">ใบเสร็จเต็มรูป</span>
+            <button
+              role="switch"
+              aria-checked={$receiptSettings.enabled}
+              on:click={() => ($receiptSettings.enabled = !$receiptSettings.enabled)}
+              class="relative w-10 h-6 rounded-full transition-colors duration-200 cursor-pointer
+                {$receiptSettings.enabled ? 'bg-stone-800' : 'bg-stone-300'}"
+            >
+              <span
+                class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200
+                  {$receiptSettings.enabled ? 'translate-x-4' : 'translate-x-0'}"
+              />
+            </button>
+          </label>
+        </div>
         <SettlementSummary />
       </div>
+
+      {#if $receiptSettings.enabled}
+        <div class="px-3 md:px-8 pb-8 bg-stone-50/50 rounded-b-2xl border-t border-stone-100">
+          <h2 class="text-xl font-medium tracking-tight text-stone-800 mt-8 mb-6 flex items-center gap-2">
+            <Receipt size={20} class="text-stone-400" />
+            ใบเสร็จเต็มรูปแบบ
+          </h2>
+          <FullReceipt />
+        </div>
+      {/if}
     </div>
 
     <!-- Right Side Tray -->

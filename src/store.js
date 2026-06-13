@@ -222,6 +222,34 @@ export const settlement = derived(
   }
 );
 
+export const receiptSettings = createPersistedStore('billshare_receiptSettings', {
+  enabled: false,
+  sections: {
+    header: true,
+    transactionInfo: true,
+    lineItems: true,
+    summary: true,
+    payment: true,
+  },
+  // Header fields
+  businessName: '',
+  address: '',
+  tin: '',
+  branch: '00000',
+  phone: '',
+  // Transaction info fields
+  receiptNumber: '',
+  tableNumber: '',
+  staffId: '',
+  // Payment fields
+  paymentMethod: 'cash',
+  cashTendered: '',
+  transferRef: '',
+  cardLastFour: '',
+  approvalCode: '',
+  bankName: '',
+});
+
 // Sync transactions and pool settings when users are deleted
 users.subscribe($users => {
   const currentUserIds = new Set($users.map(user => user.id));
